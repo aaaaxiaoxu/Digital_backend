@@ -44,7 +44,7 @@ springdoc:
   group-configs:
     - group: 'default'
       paths-to-match: '/**'
-      packages-to-scan: com.adx.agent.controller
+      packages-to-scan: com.dj.digitalplatform.controller
 # knife4j
 knife4j:
   enable: true
