@@ -53,6 +53,18 @@ public class User implements Serializable {
     @TableLogic
     private Integer isDelete;
 
+    private String phoneNumber;
+
+    private String qualificationFile;
+
+    private Integer qualificationStatus;
+
+    private String education;
+
+    private String workplace;
+
+    private String city;
+
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 }
