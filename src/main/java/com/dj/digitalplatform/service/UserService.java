@@ -4,9 +4,11 @@ package com.dj.digitalplatform.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.dj.digitalplatform.model.dto.user.UserQueryRequest;
+import com.dj.digitalplatform.model.dto.user.UserQualificationQueryRequest;
 import com.dj.digitalplatform.model.entity.User;
 import com.dj.digitalplatform.model.vo.LoginUserVO;
 import com.dj.digitalplatform.model.vo.UserVO;
+import com.dj.digitalplatform.model.vo.UserQualificationVO;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
@@ -95,6 +97,52 @@ public interface UserService extends IService<User> {
      */
     boolean isAdmin(User user);
 
+    /**
+     * Update user qualification information
+     *
+     * @param userId User ID
+     * @param qualificationFileUrl Qualification file URL
+     * @param education Education background
+     * @param workplace Workplace/Study institution
+     * @param city City of residence
+     * @return Update result
+     */
+    boolean updateUserQualification(Long userId, String qualificationFileUrl, String education, String workplace, String city);
 
+    /**
+     * Get query wrapper for user qualification query
+     *
+     * @param userQualificationQueryRequest Query request
+     * @return QueryWrapper
+     */
+    QueryWrapper<User> getQualificationQueryWrapper(UserQualificationQueryRequest userQualificationQueryRequest);
+
+    /**
+     * Get user qualification VO
+     *
+     * @param user User entity
+     * @return UserQualificationVO
+     */
+    UserQualificationVO getUserQualificationVO(User user);
+
+    /**
+     * Get list of user qualification VOs
+     *
+     * @param userList User list
+     * @return List of UserQualificationVO
+     */
+    List<UserQualificationVO> getUserQualificationVOList(List<User> userList);
+
+
+
+
+
+    /**
+     * Audit user qualification - set status to 1 (approved)
+     *
+     * @param userId User ID
+     * @return Audit result
+     */
+    boolean auditUserQualification(Long userId);
 
 }

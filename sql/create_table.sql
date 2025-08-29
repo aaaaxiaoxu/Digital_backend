@@ -22,6 +22,11 @@ create table if not exists user
     updateTime   datetime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment 'Update time',
     isDelete     tinyint      default 0                 not null comment 'Is deleted',
     phoneNumber  varchar(256)                           null comment 'Phone Number',
+    qualificationFile  varchar(1024)                          null comment 'Qualification file (image)',
+    qualificationStatus tinyint default 0                     null comment 'Qualification review status: 0 = pending/rejected, 1 = approved',
+    education          varchar(50)                            null comment 'Education: undergraduate, master, doctorate',
+    workplace          varchar(512)                           null comment 'Workplace/Study institution (e.g., company, university)',
+    city               varchar(256)                           null comment 'City of residence',
     UNIQUE KEY uk_userAccount (userAccount),
     UNIQUE KEY uk_email (email),
     INDEX idx_userName (userName)

@@ -9,17 +9,25 @@ import com.dj.digitalplatform.exception.ErrorCode;
 import com.dj.digitalplatform.exception.ThrowUtils;
 import com.dj.digitalplatform.model.dto.user.UserLoginRequest;
 import com.dj.digitalplatform.model.dto.user.UserQueryRequest;
+
+import com.dj.digitalplatform.model.dto.user.UserQualificationAuditRequest;
+import com.dj.digitalplatform.model.dto.user.UserQualificationQueryRequest;
+import com.dj.digitalplatform.model.dto.user.UserQualificationRequest;
 import com.dj.digitalplatform.model.dto.user.UserRegisterRequest;
 import com.dj.digitalplatform.model.dto.user.UserUpdateRequest;
 import com.dj.digitalplatform.model.entity.User;
 import com.dj.digitalplatform.model.vo.LoginUserVO;
 import com.dj.digitalplatform.model.vo.UserVO;
+import com.dj.digitalplatform.model.vo.UserQualificationVO;
 import com.dj.digitalplatform.service.UserService;
+import com.dj.digitalplatform.manager.FileManager;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import java.util.List;
 
@@ -29,6 +37,9 @@ public class UserController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private FileManager fileManager;
 
 
 
@@ -159,6 +170,139 @@ public class UserController {
         List<UserVO> userVOList = userService.getUserVOList(userPage.getRecords());
         userVOPage.setRecords(userVOList);
         return ResultUtils.success(userVOPage);
+    }
+
+    /**
+     * Upload user qualification information
+     */
+    @PostMapping("/qualification/upload")
+    public BaseResponse<Boolean> uploadUserQualification(
+            @RequestParam("qualificationFile") MultipartFile qualificationFile,
+            @RequestParam(value = "education", required = false) String education,
+            @RequestParam(value = "workplace", required = false) String workplace,
+            @RequestParam(value = "city", required = false) String city,
+            HttpServletRequest request) {
+        
+        // Check if user is logged in
+        User loginUser = userService.getLoginUser(request);
+        Long userId = loginUser.getId();
+        
+        // Validate qualification file
+        fileManager.validImage(qualificationFile);
+        
+        // Upload qualification file and get URL
+        String qualificationFileUrl = fileManager.uploadImage(qualificationFile, "qualification");
+        
+        // Update user qualification information
+        boolean result = userService.updateUserQualification(userId, qualificationFileUrl, education, workplace, city);
+        
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * Update user qualification information (without file upload)
+     */
+    @PostMapping("/qualification/update")
+    public BaseResponse<Boolean> updateUserQualification(
+            @RequestBody UserQualificationRequest userQualificationRequest,
+            HttpServletRequest request) {
+        
+        ThrowUtils.throwIf(userQualificationRequest == null, ErrorCode.PARAMS_ERROR);
+        
+        // Check if user is logged in
+        User loginUser = userService.getLoginUser(request);
+        Long userId = loginUser.getId();
+        
+        String education = userQualificationRequest.getEducation();
+        String workplace = userQualificationRequest.getWorkplace();
+        String city = userQualificationRequest.getCity();
+        
+        // Update user qualification information (without changing qualification file)
+        boolean result = userService.updateUserQualification(userId, null, education, workplace, city);
+        
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * Get users with qualification status 0 (pending/rejected) - Admin only
+     */
+    @PostMapping("/qualification/status0/list")
+    public BaseResponse<Page<User>> listQualificationStatus0(
+            @RequestBody UserQualificationQueryRequest userQualificationQueryRequest,
+            HttpServletRequest request) {
+        
+        ThrowUtils.throwIf(userQualificationQueryRequest == null, ErrorCode.PARAMS_ERROR);
+        
+        // Check if user is admin
+        User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(!userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR, "Only admin can access");
+        
+        // Force set qualification status to 0
+        userQualificationQueryRequest.setQualificationStatus(0);
+        
+        long current = userQualificationQueryRequest.getCurrent();
+        long pageSize = userQualificationQueryRequest.getPageSize();
+        
+        // Set default values if invalid
+        if (current <= 0) current = 1;
+        if (pageSize <= 0) pageSize = 10;
+        
+        Page<User> userPage = userService.page(new Page<>(current, pageSize),
+                userService.getQualificationQueryWrapper(userQualificationQueryRequest));
+        
+        return ResultUtils.success(userPage);
+    }
+
+    /**
+     * Get users with qualification status 1 (approved) - Admin only
+     */
+    @PostMapping("/qualification/status1/list")
+    public BaseResponse<Page<User>> listQualificationStatus1(
+            @RequestBody UserQualificationQueryRequest userQualificationQueryRequest,
+            HttpServletRequest request) {
+        
+        ThrowUtils.throwIf(userQualificationQueryRequest == null, ErrorCode.PARAMS_ERROR);
+        
+        // Check if user is admin
+        User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(!userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR, "Only admin can access");
+        
+        // Force set qualification status to 1
+        userQualificationQueryRequest.setQualificationStatus(1);
+        
+        long current = userQualificationQueryRequest.getCurrent();
+        long pageSize = userQualificationQueryRequest.getPageSize();
+        
+        // Set default values if invalid
+        if (current <= 0) current = 1;
+        if (pageSize <= 0) pageSize = 10;
+        
+        Page<User> userPage = userService.page(new Page<>(current, pageSize),
+                userService.getQualificationQueryWrapper(userQualificationQueryRequest));
+        
+        return ResultUtils.success(userPage);
+    }
+
+    /**
+     * Audit user qualification - Admin only (set status to 1)
+     */
+    @PostMapping("/qualification/audit")
+    public BaseResponse<Boolean> auditUserQualification(
+            @RequestBody UserQualificationAuditRequest userQualificationAuditRequest,
+            HttpServletRequest request) {
+        
+        ThrowUtils.throwIf(userQualificationAuditRequest == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(userQualificationAuditRequest.getUserId() == null, ErrorCode.PARAMS_ERROR, "User ID cannot be null");
+        
+        // Check if user is admin
+        User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(!userService.isAdmin(loginUser), ErrorCode.NO_AUTH_ERROR, "Only admin can audit qualifications");
+        
+        Long userId = userQualificationAuditRequest.getUserId();
+        
+        boolean result = userService.auditUserQualification(userId);
+        
+        return ResultUtils.success(result);
     }
 
 

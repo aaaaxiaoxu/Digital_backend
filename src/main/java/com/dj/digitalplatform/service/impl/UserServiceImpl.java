@@ -10,10 +10,12 @@ import com.dj.digitalplatform.exception.BusinessException;
 import com.dj.digitalplatform.exception.ErrorCode;
 import com.dj.digitalplatform.mapper.UserMapper;
 import com.dj.digitalplatform.model.dto.user.UserQueryRequest;
+import com.dj.digitalplatform.model.dto.user.UserQualificationQueryRequest;
 import com.dj.digitalplatform.model.entity.User;
 import com.dj.digitalplatform.model.enums.UserRoleEnum;
 import com.dj.digitalplatform.model.vo.LoginUserVO;
 import com.dj.digitalplatform.model.vo.UserVO;
+import com.dj.digitalplatform.model.vo.UserQualificationVO;
 import com.dj.digitalplatform.service.EmailService;
 import com.dj.digitalplatform.service.UserService;
 import jakarta.annotation.Resource;
@@ -121,6 +123,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "User does not exist or password is incorrect");
         }
 
+        // 3. Store user login state in session
+        request.getSession().setAttribute(USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }
 
@@ -244,6 +248,158 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         final String SALT = "wyf_da_niu_niu";
         return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
     }
+
+    /**
+     * Update user qualification information
+     * @param userId User ID
+     * @param qualificationFileUrl Qualification file URL
+     * @param education Education background
+     * @param workplace Workplace/Study institution
+     * @param city City of residence
+     * @return Update result
+     */
+    @Override
+    public boolean updateUserQualification(Long userId, String qualificationFileUrl, String education, String workplace, String city) {
+        if (userId == null || userId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "User ID is invalid");
+        }
+        
+        // Check if user exists
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "User does not exist");
+        }
+        
+        // Update user qualification information
+        User updateUser = new User();
+        updateUser.setId(userId);
+        
+        // Only update qualification file if URL is provided
+        if (StrUtil.isNotBlank(qualificationFileUrl)) {
+            updateUser.setQualificationFile(qualificationFileUrl);
+            // Reset qualification status to pending when uploading new qualification file
+            updateUser.setQualificationStatus(0);
+        }
+        
+        // Update other information if provided
+        if (StrUtil.isNotBlank(education)) {
+            updateUser.setEducation(education);
+        }
+        if (StrUtil.isNotBlank(workplace)) {
+            updateUser.setWorkplace(workplace);
+        }
+        if (StrUtil.isNotBlank(city)) {
+            updateUser.setCity(city);
+        }
+        
+        boolean result = this.updateById(updateUser);
+        if (!result) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "Failed to update user qualification information");
+        }
+        
+        return true;
+    }
+
+    /**
+     * Get query wrapper for user qualification query
+     * @param userQualificationQueryRequest Query request
+     * @return QueryWrapper
+     */
+    @Override
+    public QueryWrapper<User> getQualificationQueryWrapper(UserQualificationQueryRequest userQualificationQueryRequest) {
+        if (userQualificationQueryRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "Request parameters are empty");
+        }
+        
+        Long id = userQualificationQueryRequest.getId();
+        String userAccount = userQualificationQueryRequest.getUserAccount();
+        String userName = userQualificationQueryRequest.getUserName();
+        Integer qualificationStatus = userQualificationQueryRequest.getQualificationStatus();
+        String education = userQualificationQueryRequest.getEducation();
+        String workplace = userQualificationQueryRequest.getWorkplace();
+        String city = userQualificationQueryRequest.getCity();
+        String sortField = userQualificationQueryRequest.getSortField();
+        String sortOrder = userQualificationQueryRequest.getSortOrder();
+
+        log.info("Query parameters: qualificationStatus={}, userAccount={}, userName={}", 
+                qualificationStatus, userAccount, userName);
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        
+        queryWrapper.eq(id != null && id > 0, "id", id);
+        queryWrapper.eq(ObjUtil.isNotNull(qualificationStatus), "qualificationStatus", qualificationStatus);
+        // Use like for fuzzy search
+        queryWrapper.like(StrUtil.isNotBlank(userAccount), "userAccount", userAccount);
+        queryWrapper.like(StrUtil.isNotBlank(userName), "userName", userName);
+        queryWrapper.like(StrUtil.isNotBlank(education), "education", education);
+        queryWrapper.like(StrUtil.isNotBlank(workplace), "workplace", workplace);
+        queryWrapper.like(StrUtil.isNotBlank(city), "city", city);
+        
+        // Only query users who have qualification file (have submitted qualification)
+        queryWrapper.isNotNull("qualificationFile");
+        
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), 
+                sortOrder != null && sortOrder.equals("ascend"), sortField);
+        
+        log.info("Generated SQL: {}", queryWrapper.getTargetSql());
+        return queryWrapper;
+    }
+
+    /**
+     * Get user qualification VO
+     * @param user User entity
+     * @return UserQualificationVO
+     */
+    @Override
+    public UserQualificationVO getUserQualificationVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserQualificationVO userQualificationVO = new UserQualificationVO();
+        BeanUtils.copyProperties(user, userQualificationVO);
+        return userQualificationVO;
+    }
+
+    /**
+     * Get list of user qualification VOs
+     * @param userList User list
+     * @return List of UserQualificationVO
+     */
+    @Override
+    public List<UserQualificationVO> getUserQualificationVOList(List<User> userList) {
+        if (CollUtil.isEmpty(userList)) {
+            return new ArrayList<>();
+        }
+        return userList.stream().map(this::getUserQualificationVO).collect(Collectors.toList());
+    }
+
+    /**
+     * Audit user qualification
+     * @param userId User ID
+     * @param qualificationStatus Qualification status (0 = rejected, 1 = approved)
+     * @return Audit result
+     */
+    @Override
+    public boolean auditUserQualification(Long userId) {
+        if (userId == null || userId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "User ID is invalid");
+        }
+        
+        // Update qualification status to 1 (approved)
+        User updateUser = new User();
+        updateUser.setId(userId);
+        updateUser.setQualificationStatus(1);
+        
+        boolean result = this.updateById(updateUser);
+        if (!result) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "Failed to audit user qualification");
+        }
+        
+        log.info("Admin approved user qualification: userId={}", userId);
+        return true;
+    }
+
+
 
 
 }
