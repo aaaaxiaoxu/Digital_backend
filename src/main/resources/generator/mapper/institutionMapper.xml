@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dj.digitalplatform.mapper.institutionMapper">
+
+    <resultMap id="BaseResultMap" type="com.dj.digitalplatform.model.entity.Institution">
+            <id property="id" column="id" />
+            <result property="institutionName" column="institutionName" />
+            <result property="institutionNameEnglish" column="institutionNameEnglish" />
+            <result property="institutionType" column="institutionType" />
+            <result property="countryRegion" column="countryRegion" />
+            <result property="city" column="city" />
+            <result property="geographicalCoordinates" column="geographicalCoordinates" />
+            <result property="institutionWebsite" column="institutionWebsite" />
+            <result property="createTime" column="createTime" />
+            <result property="updateTime" column="updateTime" />
+            <result property="isDelete" column="isDelete" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,institutionName,institutionNameEnglish,institutionType,countryRegion,city,
+        geographicalCoordinates,institutionWebsite,createTime,updateTime,isDelete
+    </sql>
+</mapper>
