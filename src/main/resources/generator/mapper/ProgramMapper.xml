@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dj.digitalplatform.mapper.ProgramMapper">
+
+    <resultMap id="BaseResultMap" type="com.dj.digitalplatform.model.entity.Program">
+            <id property="id" column="id" />
+            <result property="programName" column="programName" />
+            <result property="programNameEnglish" column="programNameEnglish" />
+            <result property="degreeType" column="degreeType" />
+            <result property="programDuration" column="programDuration" />
+            <result property="languageOfInstruction" column="languageOfInstruction" />
+            <result property="deliveryMode" column="deliveryMode" />
+            <result property="programOverview" column="programOverview" />
+            <result property="coreCourses" column="coreCourses" />
+            <result property="researchFocus" column="researchFocus" />
+            <result property="programHighlights" column="programHighlights" />
+            <result property="facultyInformation" column="facultyInformation" />
+            <result property="projectExamples" column="projectExamples" />
+            <result property="careerProspects" column="careerProspects" />
+            <result property="partnerInstitutions" column="partnerInstitutions" />
+            <result property="accreditationStatus" column="accreditationStatus" />
+            <result property="institution_id" column="institution_id" />
+            <result property="createTime" column="createTime" />
+            <result property="updateTime" column="updateTime" />
+            <result property="isDelete" column="isDelete" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,programName,programNameEnglish,degreeType,programDuration,languageOfInstruction,
+        deliveryMode,programOverview,coreCourses,researchFocus,programHighlights,
+        facultyInformation,projectExamples,careerProspects,partnerInstitutions,
+        accreditationStatus,institution_id,createTime,updateTime,isDelete
+    </sql>
+</mapper>
